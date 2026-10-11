@@ -12,7 +12,7 @@ local Tab = Window:AddTab({ Title = "Xác Thực Key", Icon = "key" })
 
 local KeyInput = Tab:AddInput("Input", {
     Title = "Key Bảo Vệ",
-    Default = "Howdz1606-12", -- Tự động điền Key Game mặc định
+    Default = "Howdz1606-12",
     Placeholder = "Nhập Key...",
     Numeric = false,
     Finished = false,
@@ -31,32 +31,37 @@ Tab:AddButton({
 
         local workerUrl = "https://how-hub.howutuban.workers.dev/?key=" .. enteredKey
         
-        -- Hàm gửi yêu cầu kèm Header xác thực X-Roblox-Script
-        local success, result = pcall(function()
-            local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-            if httpRequest then
-                local res = httpRequest({
+        local result = nil
+        pcall(function()
+            local reqFunc = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+            if reqFunc then
+                local res = reqFunc({
                     Url = workerUrl,
                     Method = "GET",
                     Headers = {
                         ["X-Roblox-Script"] = "true"
                     }
                 })
-                return res.Body
-            else
-                return game:HttpGet(workerUrl)
+                if res and res.Body then
+                    result = res.Body
+                end
             end
         end)
 
-        if success and result ~= "INVALID_KEY" and result ~= "GITHUB_ERROR" and not string.find(result, "ACCESS_DENIED") then
+        if not result or result == "" then
+            pcall(function()
+                result = game:HttpGet(workerUrl)
+            end)
+        end
+
+        if result and result ~= "INVALID_KEY" and result ~= "GITHUB_ERROR" and not string.find(result, "ACCESS_DENIED") then
             Fluent:Notify({ Title = "Thành Công!", Content = "Đang tải Hub...", Duration = 2 })
             task.wait(1)
             Window:Destroy()
             
-            -- Chạy mã nguồn Hub chính từ GitHub Private
             loadstring(result)()
         else
-            Fluent:Notify({ Title = "Thất Bại!", Content = "Key không đúng hoặc sai môi trường!", Duration = 3 })
+            Fluent:Notify({ Title = "Thất Bại!", Content = "Key sai hoặc lỗi kết nối máy chủ!", Duration = 3 })
         end
     end
 })
