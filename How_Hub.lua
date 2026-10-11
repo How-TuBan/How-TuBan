@@ -12,7 +12,7 @@ local Tab = Window:AddTab({ Title = "Xác Thực Key", Icon = "key" })
 
 local KeyInput = Tab:AddInput("Input", {
     Title = "Key Bảo Vệ",
-    Default = "Howdz1606-12", -- Đã tự động điền sẵn Key
+    Default = "Howdz1606-12", -- Tự động điền Key Game mặc định
     Placeholder = "Nhập Key...",
     Numeric = false,
     Finished = false,
@@ -22,17 +22,38 @@ Tab:AddButton({
     Title = "Mở Khóa Script",
     Callback = function()
         local enteredKey = KeyInput.Value
+        if enteredKey == "" then
+            Fluent:Notify({ Title = "Thông báo", Content = "Vui lòng nhập Key!", Duration = 3 })
+            return
+        end
+
         Fluent:Notify({ Title = "Hệ thống", Content = "Đang kiểm tra Key...", Duration = 2 })
 
         local workerUrl = "https://how-hub.howutuban.workers.dev/?key=" .. enteredKey
+        
+        -- Hàm gửi yêu cầu kèm Header xác thực X-Roblox-Script
         local success, result = pcall(function()
-            return game:HttpGet(workerUrl)
+            local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+            if httpRequest then
+                local res = httpRequest({
+                    Url = workerUrl,
+                    Method = "GET",
+                    Headers = {
+                        ["X-Roblox-Script"] = "true"
+                    }
+                })
+                return res.Body
+            else
+                return game:HttpGet(workerUrl)
+            end
         end)
 
-        if success and result ~= "INVALID_KEY" and result ~= "GITHUB_ERROR" then
+        if success and result ~= "INVALID_KEY" and result ~= "GITHUB_ERROR" and not string.find(result, "ACCESS_DENIED") then
             Fluent:Notify({ Title = "Thành Công!", Content = "Đang tải Hub...", Duration = 2 })
             task.wait(1)
             Window:Destroy()
+            
+            -- Chạy mã nguồn Hub chính từ GitHub Private
             loadstring(result)()
         else
             Fluent:Notify({ Title = "Thất Bại!", Content = "Key không đúng hoặc sai môi trường!", Duration = 3 })
